@@ -538,11 +538,14 @@ export function evaluateCleanGemGate(token: {
 
 export function processPair(
   pair: DexScreenerPair,
-  existingHistory: TokenSnapshot[] = []
+  existingHistory: TokenSnapshot[] = [],
+  existingToken?: ScoredToken
 ): ScoredToken {
   const now = Date.now();
-  const ageMs = now - pair.pairCreatedAt;
-  const ageMinutes = Math.floor(ageMs / (60 * 1000));
+  const ageMs = Math.max(0, now - (pair.pairCreatedAt || now));
+  // Cap ageMinutes at reasonable max (1 year) to avoid issues with bad data
+  const maxReasonableAgeMinutes = 365 * 24 * 60; // 1 year
+  const ageMinutes = Math.min(Math.floor(ageMs / (60 * 1000)), maxReasonableAgeMinutes);
 
   // Create current snapshot
   const currentSnapshot: TokenSnapshot = {
@@ -579,6 +582,7 @@ export function processPair(
     ageMinutes,
     txns5m: (pair.txns?.m5?.buys || 0) + (pair.txns?.m5?.sells || 0),
     txns1h: (pair.txns?.h1?.buys || 0) + (pair.txns?.h1?.sells || 0),
+    priceNative: parseFloat(pair.priceNative) || 0,
   };
 
   const riskBreakdown = calculateRiskScore(tokenMetrics);
@@ -593,6 +597,27 @@ export function processPair(
     riskScore: riskBreakdown.score,
     alphaScore: alphaBreakdown.score,
   });
+
+  const highScoreFallback =
+    riskBreakdown.score >= CONFIG.gate.minRiskScore ||
+    alphaBreakdown.score >= CONFIG.gate.minAlphaScore;
+  const gateReasons = [...gateResult.reasons];
+  if (!gateResult.isCleanGem && highScoreFallback) {
+    gateReasons.push({
+      criterion: 'Score thresholds',
+      passed: true,
+      value: `Risk ${riskBreakdown.score.toFixed(0)} / Alpha ${alphaBreakdown.score.toFixed(0)}`,
+      threshold: `Risk ≥ ${CONFIG.gate.minRiskScore} OR Alpha ≥ ${CONFIG.gate.minAlphaScore}`,
+      explanation: 'High risk or alpha score qualifies for clean gem visibility',
+    });
+  }
+
+  const detectFirstSeen = existingToken?.detectFirstSeen ?? now;
+  const detectionLatencyMs = Math.max(
+    0,
+    detectFirstSeen - (pair.pairCreatedAt || now)
+  );
+  const detectFirstPrice = existingToken?.detectFirstPrice ?? (parseFloat(pair.priceNative) || 0);
 
   return {
     address: pair.baseToken.address,
@@ -609,14 +634,23 @@ export function processPair(
     buys5m: tokenMetrics.buys5m,
     sells5m: tokenMetrics.sells5m,
     priceUsd: parseFloat(pair.priceUsd) || 0,
+    priceNative: tokenMetrics.priceNative,
     priceChange5m: tokenMetrics.priceChange5m,
     priceChange1h: tokenMetrics.priceChange1h,
     fdv: pair.fdv || 0,
     riskScore: riskBreakdown.score,
     alphaScore: alphaBreakdown.score,
-    isCleanGem: gateResult.isCleanGem,
-    gateReasons: gateResult.reasons,
+    isCleanGem: gateResult.isCleanGem || highScoreFallback,
+    gateReasons,
     history,
     lastUpdated: now,
+    detectFirstSeen,
+    detectionLatencyMs,
+    pairCreatedAt: pair.pairCreatedAt || now,
+    detectFirstPrice,
+    liquiditySol:
+      tokenMetrics.priceUsd > 0
+        ? (tokenMetrics.liquidity / tokenMetrics.priceUsd) * tokenMetrics.priceNative
+        : 0,
   };
 }

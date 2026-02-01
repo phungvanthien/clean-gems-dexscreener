@@ -70,6 +70,7 @@ export interface ScoredToken {
   // Current metrics
   ageMinutes: number;
   liquidity: number;
+  liquiditySol: number;
   volume5m: number;
   volume1h: number;
   txns5m: number;
@@ -79,6 +80,7 @@ export interface ScoredToken {
   priceUsd: number;
   priceChange5m: number;
   priceChange1h: number;
+  priceNative: number;
   fdv: number;
 
   // Computed scores
@@ -94,6 +96,10 @@ export interface ScoredToken {
 
   // Timestamp
   lastUpdated: number;
+  detectFirstSeen: number;
+  detectionLatencyMs: number;
+  detectFirstPrice: number;
+  pairCreatedAt: number;
 }
 
 // Explanation for gate pass/fail
@@ -141,6 +147,8 @@ export interface TokensResponse {
   nextRefresh: number;
   totalPairs: number;
   gemsCount: number;
+  newCleanGems?: ScoredToken[];
+  newPools?: ScoredToken[];
 }
 
 // Cache entry

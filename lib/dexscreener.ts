@@ -2,7 +2,7 @@
  * DexScreener API Client with Caching
  */
 
-import { DexScreenerPair, CacheEntry } from './types';
+import { DexScreenerPair, CacheEntry } from '@/lib/types';
 
 const DEXSCREENER_API = 'https://api.dexscreener.com';
 
@@ -11,8 +11,8 @@ const cache = new Map<string, CacheEntry<unknown>>();
 
 // Cache configuration
 const CACHE_CONFIG = {
-  // New pairs endpoint - cache for 30 seconds to avoid rate limiting
-  newPairs: 30 * 1000,
+  // New pairs endpoint - cache for 60 seconds to avoid rate limiting
+  newPairs: 60 * 1000,
   // Token details - cache for 60 seconds
   tokenDetails: 60 * 1000,
 };
@@ -42,6 +42,131 @@ function setCache<T>(key: string, data: T, ttlMs: number): void {
  * Fetch new Solana pairs from DexScreener
  * Uses the token profiles/latest endpoint for newest pairs
  */
+async function fetchPairMetadata(pair: DexScreenerPair): Promise<number | undefined> {
+  try {
+    const response = await fetch(
+      `${DEXSCREENER_API}/token-pairs/v1/${pair.chainId}/${pair.pairAddress}`,
+      { headers: { Accept: 'application/json' } },
+    );
+
+    if (!response.ok) {
+      console.warn(`Failed to fetch metadata for ${pair.pairAddress}: ${response.status}`);
+      return undefined;
+    }
+
+    const data = await response.json();
+    return data.pairCreatedAt;
+  } catch (error) {
+    console.error(`Error fetching metadata for ${pair.pairAddress}:`, error);
+    return undefined;
+  }
+}
+
+async function fetchPairsBySearchTerms(): Promise<DexScreenerPair[]> {
+  const searchTerms = [
+    'new',
+    'token',
+    'meme',
+    'coin',
+    'gem',
+    'launcher',
+    'fresh',
+    'pump',
+    'sol',
+    'solana',
+    'launch',
+    'airdrop',
+    'nft',
+    'gaming',
+    'rapid',
+    'viral',
+    'mint',
+    'dex',
+    'rug',
+    'y00ts',
+    'ape',
+    'squad',
+    'mochi',
+    'expo',
+    'go',
+    'rise',
+    'sizzle',
+  ];
+  const seen = new Map<string, DexScreenerPair>();
+
+  for (const term of searchTerms) {
+    try {
+      const url = `${DEXSCREENER_API}/latest/dex/search?q=${encodeURIComponent(term)}&chainId=solana`;
+      console.log(`[fetchNewSolanaPairs] Searching "${term}" on Solana...`);
+      const res = await fetch(url, {
+        headers: { Accept: 'application/json' },
+        next: { revalidate: 60 },
+      });
+      if (!res.ok) {
+        console.warn(`[fetchNewSolanaPairs] Search "${term}" failed: ${res.status}`);
+        continue;
+      }
+      const data = await res.json();
+      const candidates: DexScreenerPair[] = data.pairs || [];
+      for (const pair of candidates) {
+        if (
+          pair?.pairAddress &&
+          pair?.chainId === 'solana' &&
+          pair?.baseToken?.symbol?.toUpperCase() !== 'SOL' &&
+          pair?.baseToken?.address &&
+          !seen.has(pair.pairAddress)
+        ) {
+          seen.set(pair.pairAddress, pair);
+        }
+      }
+      await new Promise((resolve) => setTimeout(resolve, 300));
+    } catch (error) {
+      console.error(`[fetchNewSolanaPairs] Search "${term}" error:`, error);
+    }
+  }
+
+  console.log(`[fetchNewSolanaPairs] Search gathered ${seen.size} unique pairs`);
+  return Array.from(seen.values());
+}
+
+async function fetchPairsFromProfiles(): Promise<DexScreenerPair[]> {
+  try {
+    const profilesUrl = `${DEXSCREENER_API}/token-profiles/latest/v1?chainId=solana`;
+    console.log(`[fetchNewSolanaPairs] Fetching token profiles from: ${profilesUrl}`);
+    const response = await fetch(profilesUrl, {
+      headers: { Accept: 'application/json' },
+      next: { revalidate: 60 },
+    });
+    if (!response.ok) {
+      console.warn('[fetchNewSolanaPairs] Token profiles request failed: ', response.status);
+      return [];
+    }
+
+    const data = await response.json();
+    const rawProfiles = Array.isArray(data) ? data : Object.values(data || {});
+    const pairs: DexScreenerPair[] = [];
+    for (const profile of rawProfiles) {
+      if (!profile?.pairs || !Array.isArray(profile.pairs)) continue;
+      for (const pair of profile.pairs) {
+        if (
+          pair?.pairAddress &&
+          pair?.chainId === 'solana' &&
+          pair?.baseToken?.symbol?.toUpperCase() !== 'SOL' &&
+          pair?.baseToken?.address
+        ) {
+          pairs.push(pair);
+        }
+      }
+    }
+
+    console.log(`[fetchNewSolanaPairs] Token profiles yielded ${pairs.length} pairs`);
+    return pairs;
+  } catch (error) {
+    console.error('[fetchNewSolanaPairs] token profiles error:', error);
+    return [];
+  }
+}
+
 export async function fetchNewSolanaPairs(): Promise<DexScreenerPair[]> {
   const cacheKey = 'solana-new-pairs';
   const cached = getCached<DexScreenerPair[]>(cacheKey);
@@ -50,38 +175,51 @@ export async function fetchNewSolanaPairs(): Promise<DexScreenerPair[]> {
   }
 
   try {
-    // Fetch latest pairs from Solana
-    // DexScreener's latest pairs endpoint
-    const response = await fetch(
-      `${DEXSCREENER_API}/latest/dex/pairs/solana`,
-      {
-        headers: {
-          'Accept': 'application/json',
-        },
-        next: { revalidate: 30 },
-      }
-    );
+    const searchPairs = await fetchPairsBySearchTerms();
+    let allPairsRaw = searchPairs;
 
-    if (!response.ok) {
-      throw new Error(`DexScreener API error: ${response.status}`);
+    if (allPairsRaw.length === 0) {
+      console.log('[fetchNewSolanaPairs] Search returned zero pairs, falling back to token profiles');
+      const profilesPairs = await fetchPairsFromProfiles();
+      allPairsRaw = profilesPairs;
     }
 
-    const data = await response.json();
-    const pairs: DexScreenerPair[] = data.pairs || [];
+    console.log(`[fetchNewSolanaPairs] Normalizing ${allPairsRaw.length} candidate pairs`);
+    const normalisedPairs: DexScreenerPair[] = [];
+    for (const pair of allPairsRaw) {
+      if (!pair.chainId) {
+        pair.chainId = 'solana';
+      }
+      if (pair.chainId !== 'solana') continue;
+      if (pair.baseToken?.symbol?.toUpperCase() === 'SOL') continue;
 
-    // Filter to only include pairs created in the last 4 hours
-    // to ensure we capture early-stage tokens
-    const fourHoursAgo = Date.now() - 4 * 60 * 60 * 1000;
-    const recentPairs = pairs.filter(
-      (p: DexScreenerPair) => p.pairCreatedAt && p.pairCreatedAt > fourHoursAgo
-    );
+      let createdAt: number | undefined = pair.pairCreatedAt;
+      if (!createdAt) {
+        createdAt = await fetchPairMetadata(pair);
+      }
 
+      if (pair.pairAddress && pair.baseToken?.address && pair.baseToken?.symbol) {
+        normalisedPairs.push({ ...pair, pairCreatedAt: createdAt ?? Date.now() });
+      }
+    }
+
+    console.log(`[fetchNewSolanaPairs] Normalized ${normalisedPairs.length} total pairs (after filtering)`);
+
+    if (normalisedPairs.length > 0) {
+      const sample = normalisedPairs[0];
+      console.log(`[fetchNewSolanaPairs] Sample pair: ${sample.baseToken?.symbol}/${sample.quoteToken?.symbol} | Liquidity: $${sample.liquidity?.usd || 0}`);
+    }
+
+    const tenMinutesAgo = Date.now() - 10 * 60 * 1000;
+    const recentPairs = normalisedPairs.filter((p) => (p.pairCreatedAt || Date.now()) >= tenMinutesAgo);
+    console.log(`[fetchNewSolanaPairs] Filtered to ${recentPairs.length} pairs created within the last 10 minutes`);
+
+    
     setCache(cacheKey, recentPairs, CACHE_CONFIG.newPairs);
     return recentPairs;
   } catch (error) {
     console.error('Error fetching new Solana pairs:', error);
 
-    // Return cached data even if expired in case of error
     const staleCache = cache.get(cacheKey);
     if (staleCache) {
       return staleCache.data as DexScreenerPair[];

@@ -5,8 +5,8 @@
  */
 
 import { NextResponse } from 'next/server';
-import { refreshTokens, getStoreStats } from '@/lib/token-tracker';
-import { TokensResponse, ScoredToken, FilterOptions } from '@/lib/types';
+import { refreshTokens, getStoreStats, consumeNewCleanGems, consumeNewPools } from '@/lib/token-tracker';
+import { TokensResponse, FilterOptions } from '@/lib/types';
 
 // Refresh interval in ms
 const REFRESH_INTERVAL = 60 * 1000; // 60 seconds
@@ -26,6 +26,9 @@ export async function GET(request: Request) {
 
     // Refresh token data
     const allTokens = await refreshTokens();
+    const newCleanGems = consumeNewCleanGems();
+    const newPools = consumeNewPools();
+    console.log(`[API] Returning ${allTokens.length} tokens, ${newCleanGems.length} new clean gems, ${newPools.length} new pools`);
 
     // Apply filters
     let filteredTokens = allTokens.filter((token) => {
@@ -58,6 +61,8 @@ export async function GET(request: Request) {
       nextRefresh: stats.lastFetchTime + REFRESH_INTERVAL,
       totalPairs: stats.totalTokens,
       gemsCount: stats.cleanGems,
+      newCleanGems,
+      newPools,
     };
 
     return NextResponse.json(response);
