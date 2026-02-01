@@ -212,15 +212,37 @@ export async function fetchNewSolanaPairs(): Promise<DexScreenerPair[]> {
 
     console.log(`[fetchNewSolanaPairs] Normalized ${normalisedPairs.length} total pairs (after filtering)`);
 
+    let enrichedPairs = normalisedPairs;
     if (normalisedPairs.length > 0) {
-      const sample = normalisedPairs[0];
+      const pairAddresses = normalisedPairs.map((pair) => pair.pairAddress);
+      try {
+        const detailedPairs = await fetchPairsByAddresses(pairAddresses);
+        const detailMap = new Map<string, DexScreenerPair>();
+        for (const pair of detailedPairs) {
+          if (pair?.pairAddress) {
+            detailMap.set(pair.pairAddress, pair);
+          }
+        }
+        enrichedPairs = normalisedPairs.map((pair) => detailMap.get(pair.pairAddress) ?? pair);
+        console.log(
+          `[fetchNewSolanaPairs] Enriched ${enrichedPairs.length} pairs with detailed metadata (liquidity, liquiditySol)`
+        );
+      } catch (error) {
+        console.error('[fetchNewSolanaPairs] Error fetching detailed pair metadata:', error);
+      }
+    }
+
+    if (enrichedPairs.length > 0) {
+      const sample = enrichedPairs[0];
       console.log(
-        `[fetchNewSolanaPairs] Sample pair: ${sample.baseToken?.symbol}/${sample.quoteToken?.symbol} | Liquidity: $${resolveLiquidityUsd(sample)}`
+        `[fetchNewSolanaPairs] Sample pair: ${sample.baseToken?.symbol}/${sample.quoteToken?.symbol} | Liquidity: $${resolveLiquidityUsd(
+          sample
+        )}`
       );
     }
 
     const tenMinutesAgo = Date.now() - 10 * 60 * 1000;
-    const recentPairs = normalisedPairs.filter((p) => (p.pairCreatedAt || Date.now()) >= tenMinutesAgo);
+    const recentPairs = enrichedPairs.filter((p) => (p.pairCreatedAt || Date.now()) >= tenMinutesAgo);
     console.log(`[fetchNewSolanaPairs] Filtered to ${recentPairs.length} pairs created within the last 10 minutes`);
 
     
