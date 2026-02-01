@@ -129,13 +129,16 @@ async function fetchPairsBySearchTerms(): Promise<DexScreenerPair[]> {
   return Array.from(seen.values());
 }
 
-async function fetchPairsFromProfiles(): Promise<DexScreenerPair[]> {
+async function fetchTokenProfiles(): Promise<DexScreenerPair[]> {
+  const cacheKey = 'solana-token-profiles';
+  const cached = getCached<DexScreenerPair[]>(cacheKey);
+  if (cached) return cached;
+
   try {
     const profilesUrl = `${DEXSCREENER_API}/token-profiles/latest/v1?chainId=solana`;
     console.log(`[fetchNewSolanaPairs] Fetching token profiles from: ${profilesUrl}`);
     const response = await fetch(profilesUrl, {
       headers: { Accept: 'application/json' },
-      next: { revalidate: 60 },
     });
     if (!response.ok) {
       console.warn('[fetchNewSolanaPairs] Token profiles request failed: ', response.status);
@@ -159,6 +162,7 @@ async function fetchPairsFromProfiles(): Promise<DexScreenerPair[]> {
       }
     }
 
+    setCache(cacheKey, pairs, CACHE_CONFIG.newPairs);
     console.log(`[fetchNewSolanaPairs] Token profiles yielded ${pairs.length} pairs`);
     return pairs;
   } catch (error) {
@@ -182,13 +186,13 @@ export async function fetchNewSolanaPairs(): Promise<DexScreenerPair[]> {
   }
 
   try {
-    const searchPairs = await fetchPairsBySearchTerms();
-    let allPairsRaw = searchPairs;
+    const profilePairs = await fetchTokenProfiles();
+    let allPairsRaw = profilePairs;
 
     if (allPairsRaw.length === 0) {
-      console.log('[fetchNewSolanaPairs] Search returned zero pairs, falling back to token profiles');
-      const profilesPairs = await fetchPairsFromProfiles();
-      allPairsRaw = profilesPairs;
+      const searchPairs = await fetchPairsBySearchTerms();
+      console.log('[fetchNewSolanaPairs] Token profiles empty, using search terms');
+      allPairsRaw = searchPairs;
     }
 
     console.log(`[fetchNewSolanaPairs] Normalizing ${allPairsRaw.length} candidate pairs`);
