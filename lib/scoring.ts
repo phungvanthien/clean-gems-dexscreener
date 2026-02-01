@@ -554,8 +554,13 @@ export function processPair(
   const maxReasonableAgeMinutes = 365 * 24 * 60; // 1 year
   const ageMinutes = Math.min(Math.floor(ageMs / (60 * 1000)), maxReasonableAgeMinutes);
 
-  // Create current snapshot
+  // Calculate liquidity once
   const liquidityUsd = resolveLiquidityUsd(pair.liquidity);
+  if (liquidityUsd === 0 && pair.baseToken?.symbol) {
+    console.warn(`[processPair] Zero liquidity for ${pair.baseToken.symbol} (${pair.pairAddress}), raw liquidity:`, pair.liquidity);
+  }
+
+  // Create current snapshot
   const currentSnapshot: TokenSnapshot = {
     timestamp: now,
     liquidity: liquidityUsd,
@@ -579,10 +584,6 @@ export function processPair(
     : filteredHistory;
 
   // Calculate scores
-  const liquidityUsd = resolveLiquidityUsd(pair.liquidity);
-  if (liquidityUsd === 0 && pair.baseToken?.symbol) {
-    console.warn(`[processPair] Zero liquidity for ${pair.baseToken.symbol} (${pair.pairAddress}), raw liquidity:`, pair.liquidity);
-  }
   const tokenMetrics = {
     liquidity: liquidityUsd,
     volume5m: pair.volume?.m5 || 0,
