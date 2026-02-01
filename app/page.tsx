@@ -174,8 +174,13 @@ const formatSolValue = (value: number) => {
 };
 
 const formatUsdValue = (value: number) => {
-  if (!Number.isFinite(value)) return '-';
+  if (!Number.isFinite(value) || value === 0) return '-';
   return `$${value.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+};
+
+const formatReserveValue = (value: number) => {
+  if (!Number.isFinite(value) || value === 0) return '-';
+  return value.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 };
 
 const formatSolDelta = (current: number, baseline: number) => {
@@ -567,9 +572,15 @@ const formatSolDelta = (current: number, baseline: number) => {
                       </span>
                     </td>
                     <td>
-                      <span className={token.liquidity >= 20000 ? '' : 'text-gem-yellow'}>
-                        ${token.liquidity.toLocaleString()}
-                      </span>
+                      <div className={token.liquidityUSD >= 20000 ? '' : 'text-gem-yellow'}>
+                        {formatUsdValue(token.liquidityUSD)}
+                      </div>
+                      <div className="text-[10px] text-gray-500 mt-1">
+                        {token.liquiditySource === 'solscan+price' ? 'On-chain verified' : 'DexScreener estimate'}
+                      </div>
+                      <div className="text-[10px] text-gray-500 mt-1">
+                        Base: {formatReserveValue(token.baseReserve)} · Quote: {formatReserveValue(token.quoteReserve)}
+                      </div>
                       <div className="text-[10px] text-gray-500 mt-1">
                         ≈ {formatSolValue(token.liquiditySol)} SOL
                       </div>

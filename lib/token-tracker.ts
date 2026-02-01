@@ -8,6 +8,7 @@
 import { ScoredToken, TokenSnapshot, DexScreenerPair } from './types';
 import { fetchNewSolanaPairs, fetchPairsByAddresses } from './dexscreener';
 import { processPair } from './scoring';
+import { calculateLiquidityUSD } from './liquidity';
 
 // In-memory storage for token data
 // Key: pairAddress, Value: ScoredToken with history
@@ -151,6 +152,11 @@ export async function refreshTokens(): Promise<ScoredToken[]> {
       const wasTracked = Boolean(existingToken);
       const existingHistory = getExistingHistory(pair.pairAddress);
       const scoredToken = processPair(pair, existingHistory, existingToken);
+      const liquidityInfo = await calculateLiquidityUSD(pair.pairAddress);
+      scoredToken.liquidityUSD = liquidityInfo.liquidityUSD;
+      scoredToken.liquiditySource = liquidityInfo.liquiditySource;
+      scoredToken.baseReserve = liquidityInfo.baseReserve;
+      scoredToken.quoteReserve = liquidityInfo.quoteReserve;
       updateToken(scoredToken);
       processedCount++;
       

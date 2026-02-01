@@ -86,6 +86,10 @@ export interface ScoredToken {
   priceChange1h: number;
   priceNative: number;
   fdv: number;
+  liquidityUSD: number;
+  liquiditySource: 'dexscreener' | 'solscan+price';
+  baseReserve: number;
+  quoteReserve: number;
 
   // Computed scores
   riskScore: number;
