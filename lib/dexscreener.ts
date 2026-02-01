@@ -167,6 +167,13 @@ async function fetchPairsFromProfiles(): Promise<DexScreenerPair[]> {
   }
 }
 
+const resolveLiquidityUsd = (pair: DexScreenerPair): number => {
+  const liquidity = pair.liquidity;
+  if (!liquidity) return 0;
+  if (typeof liquidity === 'number') return liquidity;
+  return liquidity.usd || 0;
+};
+
 export async function fetchNewSolanaPairs(): Promise<DexScreenerPair[]> {
   const cacheKey = 'solana-new-pairs';
   const cached = getCached<DexScreenerPair[]>(cacheKey);
@@ -207,7 +214,9 @@ export async function fetchNewSolanaPairs(): Promise<DexScreenerPair[]> {
 
     if (normalisedPairs.length > 0) {
       const sample = normalisedPairs[0];
-      console.log(`[fetchNewSolanaPairs] Sample pair: ${sample.baseToken?.symbol}/${sample.quoteToken?.symbol} | Liquidity: $${sample.liquidity?.usd || 0}`);
+      console.log(
+        `[fetchNewSolanaPairs] Sample pair: ${sample.baseToken?.symbol}/${sample.quoteToken?.symbol} | Liquidity: $${resolveLiquidityUsd(sample)}`
+      );
     }
 
     const tenMinutesAgo = Date.now() - 10 * 60 * 1000;

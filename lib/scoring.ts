@@ -11,7 +11,8 @@ import {
   GateReason,
   RiskBreakdown,
   AlphaBreakdown,
-  DexScreenerPair
+  DexScreenerPair,
+  DexLiquidity,
 } from './types';
 
 // ============================================================================
@@ -536,6 +537,12 @@ export function evaluateCleanGemGate(token: {
 // PROCESS DEXSCREENER PAIR
 // ============================================================================
 
+const resolveLiquidityUsd = (liquidity?: DexLiquidity): number => {
+  if (!liquidity) return 0;
+  if (typeof liquidity === 'number') return liquidity;
+  return liquidity.usd || 0;
+};
+
 export function processPair(
   pair: DexScreenerPair,
   existingHistory: TokenSnapshot[] = [],
@@ -571,8 +578,9 @@ export function processPair(
     : filteredHistory;
 
   // Calculate scores
+  const liquidityUsd = resolveLiquidityUsd(pair.liquidity);
   const tokenMetrics = {
-    liquidity: pair.liquidity?.usd || 0,
+    liquidity: liquidityUsd,
     volume5m: pair.volume?.m5 || 0,
     volume1h: pair.volume?.h1 || 0,
     buys5m: pair.txns?.m5?.buys || 0,

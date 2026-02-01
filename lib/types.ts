@@ -3,6 +3,14 @@
  */
 
 // DexScreener API response types
+export type DexLiquidity =
+  | number
+  | {
+      usd: number;
+      base: number;
+      quote: number;
+    };
+
 export interface DexScreenerPair {
   chainId: string;
   dexId: string;
@@ -38,11 +46,7 @@ export interface DexScreenerPair {
     h6: number;
     h24: number;
   };
-  liquidity: {
-    usd: number;
-    base: number;
-    quote: number;
-  };
+  liquidity?: DexLiquidity;
   fdv: number;
   pairCreatedAt: number;
 }
