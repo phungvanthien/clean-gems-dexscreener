@@ -125,6 +125,37 @@ Forces a refresh of token data.
 
 ---
 
+# Roadmap
+
+The dashboard follows a phased roadmap that starts with the current DexScreener-driven pipeline and progressively introduces on-chain validation. The plan below rebuilds the existing “V2 Roadmap” into a more actionable timeline.
+
+1. **Phase 0 – Stabilize the feed (current)**  
+   - Ensure polling every 60s stays within DexScreener limits  
+   - Normalize responses, dedupe by `pairAddress`, and keep the “New Gems” feed responsive  
+   - Track `detectFirstSeen`/`detectFirstPrice` for price deltas and store liquidity history
+
+2. **Phase 1 – RPC integration**  
+   - Add `@solana/web3.js` and create `lib/solana-rpc.ts` with connection pooling and rate limits  
+   - Start caching RPC responses with a short TTL so the UI can reuse on-chain metadata without repeated hits  
+   - Expose helper functions such as `getTokenSecurityInfo()` to gather mint/freeze authorities, holder concentration, and LP lock status
+
+3. **Phase 2 – On-chain risk checks**  
+   - Implement `checkMintAuthority()`, `checkFreezeAuthority()`, `checkHolderConcentration()`, and `checkLPLock()` around the Solana RPC helpers  
+   - Extend `calculateRiskScore()` (and optionally a `calculateRiskScoreV2()`) to include the new deductions  
+   - Surface each new factor inside the “Why?” modal so users understand the penalties and safeguards
+
+4. **Phase 3 – Score & UI upgrades**  
+   - Combine the new on-chain signals with existing DexScreener data when evaluating clean-gem thresholds  
+   - Cache on-chain enrichments (5 min TTL) and show verification badges or holder charts in the dashboard  
+   - Add LP lock/expiry indicators plus holder concentration visuals, keeping the UI informative without overwhelming the clean-gem gate
+
+5. **Phase 4 – Future enhancements**  
+   - Explore integrations with other Solana data providers (e.g., bags-sdk) if DexScreener data is insufficient for edge cases  
+   - Ship alerting or notification hooks once a candidate passes the clean-gem gate  
+   - Consider historical analytics dashboards (volume over time, price deltas vs. SOL, etc.) for advanced users
+
+## V2 Roadmap: On-Chain Risk Analysis
+
 # V2 Roadmap: On-Chain Risk Analysis
 
 ## Overview
