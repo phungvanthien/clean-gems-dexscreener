@@ -223,9 +223,29 @@ export async function fetchNewSolanaPairs(): Promise<DexScreenerPair[]> {
             detailMap.set(pair.pairAddress, pair);
           }
         }
-        enrichedPairs = normalisedPairs.map((pair) => detailMap.get(pair.pairAddress) ?? pair);
+        enrichedPairs = normalisedPairs.map((pair) => {
+          const detailed = detailMap.get(pair.pairAddress);
+          if (!detailed) {
+            console.warn(`[fetchNewSolanaPairs] No detailed data for ${pair.pairAddress}, liquidity: ${resolveLiquidityUsd(pair)}`);
+            return pair;
+          }
+          // Merge: prefer detailed data but keep original fields if detailed is missing them
+          const merged = {
+            ...pair,
+            ...detailed,
+            // Explicitly merge liquidity if detailed has it
+            liquidity: detailed.liquidity ?? pair.liquidity,
+          };
+          const liqBefore = resolveLiquidityUsd(pair);
+          const liqAfter = resolveLiquidityUsd(merged);
+          if (liqAfter > 0 && liqBefore === 0) {
+            console.log(`[fetchNewSolanaPairs] Enriched ${pair.baseToken?.symbol} liquidity: $0 -> $${liqAfter.toLocaleString()}`);
+          }
+          return merged;
+        });
+        const enrichedCount = enrichedPairs.filter(p => resolveLiquidityUsd(p) > 0).length;
         console.log(
-          `[fetchNewSolanaPairs] Enriched ${enrichedPairs.length} pairs with detailed metadata (liquidity, liquiditySol)`
+          `[fetchNewSolanaPairs] Enriched ${enrichedPairs.length} pairs, ${enrichedCount} have liquidity > 0`
         );
       } catch (error) {
         console.error('[fetchNewSolanaPairs] Error fetching detailed pair metadata:', error);
@@ -304,7 +324,23 @@ export async function fetchPairsByAddresses(
       }
 
       const data = await response.json();
-      const pairs: DexScreenerPair[] = data.pairs || (data.pair ? [data.pair] : []);
+      let pairs: DexScreenerPair[] = [];
+      
+      // Handle different response formats
+      if (Array.isArray(data.pairs)) {
+        pairs = data.pairs;
+      } else if (data.pair) {
+        pairs = [data.pair];
+      } else if (Array.isArray(data)) {
+        pairs = data;
+      }
+      
+      // Log liquidity info for debugging
+      if (pairs.length > 0) {
+        const sample = pairs[0];
+        const sampleLiq = resolveLiquidityUsd(sample);
+        console.log(`[fetchPairsByAddresses] Fetched ${pairs.length} pairs, sample liquidity: $${sampleLiq.toLocaleString()} for ${sample.baseToken?.symbol || 'unknown'}`);
+      }
 
       setCache(cacheKey, pairs, CACHE_CONFIG.tokenDetails);
       allPairs.push(...pairs);
