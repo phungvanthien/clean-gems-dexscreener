@@ -2,9 +2,11 @@ import { DexScreenerPair } from './types';
 
 const DEXSCREENER_API = 'https://api.dexscreener.com';
 const SOLSCAN_API = 'https://public-api.solscan.io';
+const BIRDEYE_API = 'https://public-api.birdeye.so';
 const STABLE_SYMBOLS = new Set(['USDC', 'USDT', 'USD', 'USDC-USDT', 'USDT-USDC']);
 
 let cachedSolPrice: number | null = null;
+const birdeyeKey = process.env.BIRDEYE_API_KEY;
 
 type SolscanTokenAccount = {
   mint?: string;
@@ -19,7 +21,7 @@ type SolscanTokenAccount = {
 export type LiquidityCalculationResult = {
   pairAddress: string;
   liquidityUSD: number;
-  source: 'dexscreener' | 'solscan+price';
+  source: 'dexscreener' | 'solscan+price' | 'birdeye';
   baseReserve: number;
   quoteReserve: number;
 };
@@ -84,6 +86,29 @@ async function fetchSolUsdPrice(): Promise<number> {
     return cachedSolPrice;
   } catch (error) {
     console.warn('[calculateLiquidityUSD] Unable to resolve SOL price', error);
+    return 0;
+  }
+}
+
+async function fetchBirdeyeLiquidity(mint: string): Promise<number> {
+  if (!birdeyeKey) return 0;
+  try {
+    const url = `${BIRDEYE_API}/defi/price?address=${encodeURIComponent(mint)}&chain=solana&include_liquidity=true`;
+    const response = await fetch(url, {
+      headers: {
+        Accept: 'application/json',
+        'X-API-Key': birdeyeKey,
+      },
+    });
+    if (!response.ok) {
+      console.warn('[calculateLiquidityUSD] Birdeye call failed', response.status);
+      return 0;
+    }
+    const payload = await response.json();
+    const value = payload?.data?.liquidity ?? payload?.data?.value ?? 0;
+    return typeof value === 'number' ? value : parseFloat(value) || 0;
+  } catch (error) {
+    console.warn('[calculateLiquidityUSD] Birdeye liquidity lookup failed', error);
     return 0;
   }
 }
@@ -161,6 +186,19 @@ export async function calculateLiquidityUSD(
       baseReserve,
       quoteReserve,
     };
+  }
+
+  if (birdeyeKey) {
+    const birdeyeLiquidity = await fetchBirdeyeLiquidity(pair.baseToken.address);
+    if (birdeyeLiquidity > 0) {
+      return {
+        pairAddress,
+        liquidityUSD: birdeyeLiquidity,
+        source: 'birdeye',
+        baseReserve,
+        quoteReserve,
+      };
+    }
   }
 
   const fallbackLiquidity = pair.liquidity?.usd || 0;
