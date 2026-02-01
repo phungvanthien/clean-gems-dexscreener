@@ -106,8 +106,13 @@ async function fetchPairsBySearchTerms(): Promise<DexScreenerPair[]> {
         console.warn(`[fetchNewSolanaPairs] Search "${term}" failed: ${res.status}`);
         continue;
       }
+      console.log(`[fetchNewSolanaPairs] Search "${term}" returned status ${res.status}`);
       const data = await res.json();
       const candidates: DexScreenerPair[] = data.pairs || [];
+      console.log(`[fetchNewSolanaPairs] Search "${term}" returned ${candidates.length} pairs (liquidity sample: ${candidates
+        .slice(0, 3)
+        .map((p) => resolveLiquidityUsd(p))
+        .join(', ')})`);
       for (const pair of candidates) {
         if (
           pair?.pairAddress &&
