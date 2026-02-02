@@ -191,7 +191,10 @@ export async function refreshTokens(): Promise<ScoredToken[]> {
             liquidityUSD: token.liquidityUSD,
             priceUsd: token.priceUsd,
             priceNative: token.priceNative,
+            volume5m: token.volume5m,
+            txns5m: token.txns5m,
             ageMinutes: token.ageMinutes,
+            gateReasons: token.gateReasons,
           })
         )
       );
