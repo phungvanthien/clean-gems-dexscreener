@@ -33,71 +33,193 @@ function formatNumber(value: number, digits = 2) {
   });
 }
 
-function bulletList(reasons: GateReason[]) {
-  return reasons.map((r) => `• ${r.criterion}: ${r.explanation}`).join('\n');
+function gateReasonsList(reasons?: GateReason[]) {
+  if (!reasons || reasons.length === 0) return ['• Waiting for data'];
+  return reasons.map((reason) => `• ${reason.criterion}: ${reason.explanation}`);
 }
 
-function buildBaseMessage(token: {
+function categorizeGateReasons(reasons?: GateReason[]) {
+  const sniper: string[] = [];
+  const buyNotes: string[] = [];
+  const safety: string[] = [];
+  const sniperKeys = ['Age', 'Activity', 'Liquidity', 'Volume', 'Txns'];
+  const buyKeys = ['Risk', 'Alpha', 'Momentum', 'Balance'];
+  if (!reasons) return { sniper, buyNotes, safety };
+  for (const reason of reasons) {
+    const entry = `• ${reason.criterion}: ${reason.explanation}`;
+    if (sniperKeys.some((key) => reason.criterion.includes(key))) {
+      sniper.push(entry);
+    } else if (buyKeys.some((key) => reason.criterion.includes(key))) {
+      buyNotes.push(entry);
+    } else {
+      safety.push(entry);
+    }
+  }
+  return { sniper, buyNotes, safety };
+}
+
+function shortPair(pairAddress: string) {
+  return `${pairAddress.slice(0, 6)}…${pairAddress.slice(-4)}`;
+}
+
+function ruleEmoji(liquidity: number) {
+  if (liquidity >= 50000) return '🟢';
+  if (liquidity >= 10000) return '🟡';
+  return '🔴';
+}
+
+function buildMessage(token: {
   symbol: string;
-  dexUrl: string;
+  name: string;
+  pairAddress: string;
+  baseMint: string;
   liquidityUSD: number;
   priceUsd: number;
   priceNative: number;
   volume5m: number;
   txns5m: number;
+  buys5m: number;
+  sells5m: number;
+  priceChange1h?: number;
+  fdv: number;
+  baseReserve: number;
+  quoteReserve: number;
+  liquiditySource: string;
   ageMinutes: number;
   gateReasons?: GateReason[];
+  isCleanGem?: boolean;
+  riskScore?: number;
+  alphaScore?: number;
 }) {
-  const parts = [
-    `*${token.symbol}* — [View on DexScreener](${token.dexUrl})`,
-    `Liquidity: $${formatNumber(token.liquidityUSD, 0)}`,
-    `Price: $${formatNumber(token.priceUsd)} (${formatNumber(token.priceNative, 6)} SOL)`,
-    `Volume (5m): $${formatNumber(token.volume5m)} · Txns: ${token.txns5m}`,
-    `Age: ${token.ageMinutes}m`,
+  const liquidityTag = ruleEmoji(token.liquidityUSD);
+  const { sniper, buyNotes, safety } = categorizeGateReasons(token.gateReasons);
+  const rows = [
+    '🚨 NEW SOLANA POOL DETECTED',
+    '',
+    '🆕 Just Listed • Ungated',
+    '',
+    `🪙 ${token.symbol} — ${token.name}`,
+    `⏱ Age: ${token.ageMinutes} min`,
+    `🔗 Pair: ${shortPair(token.pairAddress)}`,
+    '',
+    '💧 Liquidity',
+    '',
+    `${liquidityTag} $${formatNumber(token.liquidityUSD, 0)}`,
+    `${token.baseReserve.toFixed(2)} ${token.symbol}`,
+    `${token.quoteReserve.toFixed(2)} QUOTE`,
+    `📌 Source: ${token.liquiditySource}`,
+    '',
+    `${liquidityTag} RULE`,
+    '',
+    '🟢 > $50k',
+    '🟡 $10k – $50k',
+    '🔴 < $10k',
+    '',
+    '📊 Market',
+    '',
+    `💵 Price: $${formatNumber(token.priceUsd)}`,
+    `🏦 FDV: $${formatNumber(token.fdv, 0)}`,
+    `📈 1h: ${token.priceChange1h ?? 0}%`,
+    '',
+    '🔄 Momentum (5m)',
+    '',
+    `📦 Vol: $${formatNumber(token.volume5m)}`,
+    `🔁 Txns: ${token.txns5m}`,
+    `🟢 Buys: ${token.buys5m} | 🔴 Sells: ${token.sells5m}`,
+    '',
+    '🧠 Signal Scores',
+    '',
+    `⚠️ Risk: ${token.riskScore ?? '0'} / 100`,
+    `🚀 Alpha: ${token.alphaScore ?? '0'} / 100`,
+    '',
+    '⏱️ SNIPER WINDOW',
+    sniper.length ? sniper.join('\n') : '• Waiting for sniper clues',
+    '',
+    '🧠 BUY NOTES',
+    buyNotes.length ? buyNotes.join('\n') : '• Waiting for buy notes',
+    '',
+    '🛡️ SAFETY FLAGS',
+    safety.length ? safety.join('\n') : '• Waiting for additional flags',
+    '',
   ];
-  if (token.gateReasons && token.gateReasons.length) {
-    parts.push(`\n_Why snapshot:_\n${bulletList(token.gateReasons)}`);
+  if (token.isCleanGem) {
+    rows.push('✅ CLEAN GEM CONFIRMED', '🔥 Passed all gates — Sniper-ready');
+  } else {
+    rows.push('❌ NOT CLEAN (YET)', '⛔ Failed gates:', gateReasonsList(token.gateReasons).join('\n'));
   }
-  return parts.join('\n');
+  rows.push(
+    '',
+    '📌 Quick Actions',
+    '',
+    '📊 DexScreener',
+    `👉 https://dexscreener.com/solana/${token.pairAddress}`,
+    '',
+    '🦅 Birdeye',
+    `👉 https://birdeye.so/token/${token.baseMint}?chain=solana`,
+    '',
+    '📋 Copy Mint',
+    token.baseMint,
+    '',
+    `⏰ ${new Date().toUTCString()}`,
+    '⚠️ Auto alert • Not financial advice'
+  );
+  return rows.join('\n');
 }
 
 export async function alertNewPool(token: {
   symbol: string;
-  dexUrl: string;
+  name: string;
+  pairAddress: string;
+  baseMint: string;
   liquidityUSD: number;
   priceUsd: number;
   priceNative: number;
   volume5m: number;
   txns5m: number;
+  buys5m: number;
+  sells5m: number;
+  priceChange1h?: number;
+  fdv: number;
+  baseReserve: number;
+  quoteReserve: number;
+  liquiditySource: string;
   ageMinutes: number;
   gateReasons?: GateReason[];
+  isCleanGem?: boolean;
+  riskScore?: number;
+  alphaScore?: number;
 }) {
   if (!NEW_POOL_CHANNEL) return;
-  const body = [
-    '⚡ *New Pool Detected*',
-    buildBaseMessage(token),
-  ].join('\n\n');
-  await sendTelegramMessage(NEW_POOL_CHANNEL, body);
+  const message = buildMessage(token);
+  await sendTelegramMessage(NEW_POOL_CHANNEL, message);
 }
 
 export async function alertCleanGem(token: {
   symbol: string;
-  dexUrl: string;
+  name: string;
+  pairAddress: string;
+  baseMint: string;
   liquidityUSD: number;
   priceUsd: number;
   priceNative: number;
   volume5m: number;
   txns5m: number;
+  buys5m: number;
+  sells5m: number;
+  priceChange1h?: number;
+  fdv: number;
+  baseReserve: number;
+  quoteReserve: number;
+  liquiditySource: string;
   ageMinutes: number;
+  gateReasons?: GateReason[];
   riskScore: number;
   alphaScore: number;
-  gateReasons?: GateReason[];
 }) {
   if (!CLEAN_GEM_CHANNEL) return;
-  const body = [
-    '🔥 *Clean Gem Alert*',
-    buildBaseMessage(token),
-    `Risk: ${token.riskScore} · Alpha: ${token.alphaScore}`,
-  ].join('\n\n');
-  await sendTelegramMessage(CLEAN_GEM_CHANNEL, body);
+  const message = buildMessage({
+    ...token,
+    isCleanGem: true,
+  });
+  await sendTelegramMessage(CLEAN_GEM_CHANNEL, message);
 }
