@@ -15,11 +15,13 @@ async function sendTelegramMessage(
   if (!BOT_TOKEN || !chatId) return;
   try {
     const url = `${TELEGRAM_API_BASE}/bot${BOT_TOKEN}/sendMessage`;
+    console.log(`[telegram] sending to ${chatId}: ${text.slice(0, 120).replace(/\n/g, ' ')}`);
     await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ chat_id: chatId, text, parse_mode: parseMode }),
     });
+    console.log(`[telegram] sent to ${chatId}`);
   } catch (error) {
     console.warn('[telegram] failed to send message', error);
   }
@@ -56,6 +58,11 @@ function categorizeGateReasons(reasons?: GateReason[]) {
     }
   }
   return { sniper, buyNotes, safety };
+}
+
+function gateReasonsList(reasons?: GateReason[]) {
+  if (!reasons || reasons.length === 0) return ['• Waiting for data'];
+  return reasons.map((reason) => `• ${reason.criterion}: ${reason.explanation}`);
 }
 
 function shortPair(pairAddress: string) {
@@ -95,13 +102,14 @@ function buildMessage(token: {
   const { sniper, buyNotes, safety } = categorizeGateReasons(token.gateReasons);
   const rows = [
     '🚨 NEW SOLANA POOL DETECTED',
-    '',
+    '-----------------------------',
     '🆕 Just Listed • Ungated',
     '',
     `🪙 ${token.symbol} — ${token.name}`,
     `⏱ Age: ${token.ageMinutes} min`,
     `🔗 Pair: ${shortPair(token.pairAddress)}`,
     '',
+    '-----------------------------',
     '💧 Liquidity',
     '',
     `${liquidityTag} $${formatNumber(token.liquidityUSD, 0)}`,
@@ -121,23 +129,28 @@ function buildMessage(token: {
     `🏦 FDV: $${formatNumber(token.fdv, 0)}`,
     `📈 1h: ${token.priceChange1h ?? 0}%`,
     '',
+    '-----------------------------',
     '🔄 Momentum (5m)',
     '',
     `📦 Vol: $${formatNumber(token.volume5m)}`,
     `🔁 Txns: ${token.txns5m}`,
     `🟢 Buys: ${token.buys5m} | 🔴 Sells: ${token.sells5m}`,
     '',
+    '-----------------------------',
     '🧠 Signal Scores',
     '',
     `⚠️ Risk: ${token.riskScore ?? '0'} / 100`,
     `🚀 Alpha: ${token.alphaScore ?? '0'} / 100`,
     '',
+    '-----------------------------',
     '⏱️ SNIPER WINDOW',
     sniper.length ? sniper.join('\n') : '• Waiting for sniper clues',
     '',
+    '-----------------------------',
     '🧠 BUY NOTES',
     buyNotes.length ? buyNotes.join('\n') : '• Waiting for buy notes',
     '',
+    '-----------------------------',
     '🛡️ SAFETY FLAGS',
     safety.length ? safety.join('\n') : '• Waiting for additional flags',
     '',
@@ -149,6 +162,7 @@ function buildMessage(token: {
   }
   rows.push(
     '',
+    '-----------------------------',
     '📌 Quick Actions',
     '',
     '📊 DexScreener',
