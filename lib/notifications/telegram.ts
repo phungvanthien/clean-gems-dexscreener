@@ -33,7 +33,7 @@ function formatNumber(value: number, digits = 2) {
   });
 }
 
-function gateReasonsList(reasons?: GateReason[]) {
+function formatGateReasons(reasons?: GateReason[]) {
   if (!reasons || reasons.length === 0) return ['• Waiting for data'];
   return reasons.map((reason) => `• ${reason.criterion}: ${reason.explanation}`);
 }
