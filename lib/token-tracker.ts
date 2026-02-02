@@ -9,6 +9,7 @@ import { ScoredToken, TokenSnapshot, DexScreenerPair } from './types';
 import { fetchNewSolanaPairs, fetchPairsByAddresses } from './dexscreener';
 import { processPair } from './scoring';
 import { calculateLiquidityUSD } from './liquidity';
+import { alertNewPool, alertCleanGem } from './notifications/telegram';
 
 // In-memory storage for token data
 // Key: pairAddress, Value: ScoredToken with history
@@ -151,8 +152,13 @@ export async function refreshTokens(): Promise<ScoredToken[]> {
       const existingToken = tokenStore.get(pair.pairAddress);
       const wasTracked = Boolean(existingToken);
       const existingHistory = getExistingHistory(pair.pairAddress);
-      const scoredToken = processPair(pair, existingHistory, existingToken);
       const liquidityInfo = await calculateLiquidityUSD(pair.pairAddress);
+      const scoredToken = processPair(
+        pair,
+        existingHistory,
+        existingToken,
+        liquidityInfo.liquidityUSD > 0 ? liquidityInfo.liquidityUSD : undefined
+      );
       scoredToken.liquidityUSD = liquidityInfo.liquidityUSD;
       scoredToken.liquiditySource = liquidityInfo.liquiditySource;
       scoredToken.baseReserve = liquidityInfo.baseReserve;
@@ -175,6 +181,37 @@ export async function refreshTokens(): Promise<ScoredToken[]> {
     console.log(`[refreshTokens] Processed ${processedCount} pairs (${newTokensCount} new, ${newlyDetectedCleanGems.length} new clean gems)`);
     console.log(`[refreshTokens] newPoolNotifications queue size: ${newPoolNotifications.length}`);
     console.log(`[refreshTokens] tokenStore size before cleanup: ${tokenStore.size}`);
+
+    if (newPoolNotifications.length > 0) {
+      await Promise.all(
+        newPoolNotifications.map((token) =>
+          alertNewPool({
+            symbol: token.symbol,
+            dexUrl: token.dexUrl,
+            liquidityUSD: token.liquidityUSD,
+            priceUsd: token.priceUsd,
+            priceNative: token.priceNative,
+            ageMinutes: token.ageMinutes,
+          })
+        )
+      );
+    }
+    if (newlyDetectedCleanGems.length > 0) {
+      await Promise.all(
+        newlyDetectedCleanGems.map((token) =>
+          alertCleanGem({
+            symbol: token.symbol,
+            dexUrl: token.dexUrl,
+            liquidityUSD: token.liquidityUSD,
+            priceUsd: token.priceUsd,
+            priceNative: token.priceNative,
+            ageMinutes: token.ageMinutes,
+            riskScore: token.riskScore,
+            alphaScore: token.alphaScore,
+          })
+        )
+      );
+    }
 
     // Add new clean gems to notifications
     for (const gem of newlyDetectedCleanGems) {

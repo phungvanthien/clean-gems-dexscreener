@@ -546,7 +546,8 @@ const resolveLiquidityUsd = (liquidity?: DexLiquidity): number => {
 export function processPair(
   pair: DexScreenerPair,
   existingHistory: TokenSnapshot[] = [],
-  existingToken?: ScoredToken
+  existingToken?: ScoredToken,
+  liquidityOverride?: number
 ): ScoredToken {
   const now = Date.now();
   const ageMs = Math.max(0, now - (pair.pairCreatedAt || now));
@@ -555,7 +556,7 @@ export function processPair(
   const ageMinutes = Math.min(Math.floor(ageMs / (60 * 1000)), maxReasonableAgeMinutes);
 
   // Calculate liquidity once
-  const liquidityUsd = resolveLiquidityUsd(pair.liquidity);
+  const liquidityUsd = liquidityOverride ?? resolveLiquidityUsd(pair.liquidity);
   if (liquidityUsd === 0 && pair.baseToken?.symbol) {
     console.warn(`[processPair] Zero liquidity for ${pair.baseToken.symbol} (${pair.pairAddress}), raw liquidity:`, pair.liquidity);
   }
