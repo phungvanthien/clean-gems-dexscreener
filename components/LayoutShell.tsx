@@ -19,7 +19,7 @@ export default function LayoutShell({ children }: { children: React.ReactNode })
       <header className="border-b border-white/10 bg-gradient-to-b from-[#050b1a] to-transparent px-6 py-4 shadow-sm">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <Image src="/icon.png" alt="G3ms logo" width={40} height={40} className="rounded-full border border-white/20" priority />
+            <Image src="/icon.png" alt="G3ms logo" width={80} height={80} className="rounded-full" priority />
             <div>
               <p className="text-sm uppercase tracking-[0.5em] text-gray-400">Solana Clean Early G3ms</p>
               <p className="text-lg font-semibold">Live detection & insights</p>
