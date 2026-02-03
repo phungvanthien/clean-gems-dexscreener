@@ -35,6 +35,30 @@ function formatNumber(value: number, digits = 2) {
   });
 }
 
+function formatUsdPrice(value: number) {
+  if (!Number.isFinite(value)) return '-';
+  const abs = Math.abs(value);
+  let digits = 2;
+  if (abs < 0.0001) {
+    digits = 8;
+  } else if (abs < 0.01) {
+    digits = 6;
+  } else if (abs < 1) {
+    digits = 4;
+  } else if (abs < 10) {
+    digits = 2;
+  }
+  return value.toLocaleString(undefined, {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  });
+}
+
+function formatSolPrice(value: number) {
+  if (!Number.isFinite(value)) return '-';
+  return value.toFixed(8);
+}
+
 function formatGateReasons(reasons?: GateReason[]) {
   if (!reasons || reasons.length === 0) return ['• Waiting for data'];
   return reasons.map((reason) => `• ${reason.criterion}: ${reason.explanation}`);
@@ -107,7 +131,7 @@ function buildMessage(token: {
     '',
     `🪙 ${token.symbol} — ${token.name}`,
     `⏱ Age: ${token.ageMinutes} min`,
-    `🔗 Pair: ${shortPair(token.pairAddress)}`,
+    `🔗 Pair: [View Chart](https://dexscreener.com/solana/${token.pairAddress}) (${shortPair(token.pairAddress)})`,
     '',
     '-----------------------------',
     '💧 Liquidity',
@@ -117,15 +141,18 @@ function buildMessage(token: {
     `${token.quoteReserve.toFixed(2)} QUOTE`,
     `📌 Source: ${token.liquiditySource}`,
     '',
+    '-----------------------------',
     `${liquidityTag} RULE`,
     '',
     '🟢 > $50k',
     '🟡 $10k – $50k',
     '🔴 < $10k',
     '',
+    '-----------------------------',
     '📊 Market',
     '',
-    `💵 Price: $${formatNumber(token.priceUsd)}`,
+    `💵 Price: $${formatUsdPrice(token.priceUsd)}`,
+    `🪙 Price (SOL): ${formatSolPrice(token.priceNative)}`,
     `🏦 FDV: $${formatNumber(token.fdv, 0)}`,
     `📈 1h: ${token.priceChange1h ?? 0}%`,
     '',
@@ -165,11 +192,9 @@ function buildMessage(token: {
     '-----------------------------',
     '📌 Quick Actions',
     '',
-    '📊 DexScreener',
-    `👉 https://dexscreener.com/solana/${token.pairAddress}`,
+    `📊 DexScreener • [View chart](https://dexscreener.com/solana/${token.pairAddress})`,
     '',
-    '🦅 Birdeye',
-    `👉 https://birdeye.so/token/${token.baseMint}?chain=solana`,
+    `🦅 Birdeye • [Open on Birdeye](https://birdeye.so/token/${token.baseMint}?chain=solana)`,
     '',
     '📋 Copy Mint',
     token.baseMint,

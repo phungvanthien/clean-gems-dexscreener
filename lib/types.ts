@@ -1,5 +1,5 @@
 /**
- * Core types for Solana Clean Early Gems
+ * Core types for Solana Clean Early G3ms
  */
 
 // DexScreener API response types
@@ -87,7 +87,7 @@ export interface ScoredToken {
   priceNative: number;
   fdv: number;
   liquidityUSD: number;
-  liquiditySource: 'dexscreener' | 'solscan+price';
+  liquiditySource: 'dexscreener' | 'solscan+price' | 'birdeye';
   baseReserve: number;
   quoteReserve: number;
 

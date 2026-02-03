@@ -1,5 +1,5 @@
 /**
- * Scoring Logic for Solana Clean Early Gems
+ * Scoring Logic for Solana Clean Early G3ms
  *
  * This file contains all scoring and gate logic.
  * Tune the constants below to adjust sensitivity.

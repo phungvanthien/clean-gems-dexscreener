@@ -172,9 +172,14 @@ export async function refreshTokens(): Promise<ScoredToken[]> {
         if (newPoolNotifications.length > NEW_POOL_NOTIFICATION_LIMIT) {
           newPoolNotifications.length = NEW_POOL_NOTIFICATION_LIMIT;
         }
-        if (scoredToken.isCleanGem) {
-          newlyDetectedCleanGems.push(scoredToken);
-        }
+      }
+      
+      // Check if token became a Clean Gem (either new token that is Clean Gem, or existing token that just became Clean Gem)
+      const wasCleanGem = existingToken?.isCleanGem ?? false;
+      const isNowCleanGem = scoredToken.isCleanGem;
+      if (isNowCleanGem && !wasCleanGem) {
+        console.log(`[refreshTokens] Token ${scoredToken.symbol} (${scoredToken.pairAddress}) became Clean Gem (was: ${wasCleanGem}, now: ${isNowCleanGem})`);
+        newlyDetectedCleanGems.push(scoredToken);
       }
     }
     
@@ -183,36 +188,66 @@ export async function refreshTokens(): Promise<ScoredToken[]> {
     console.log(`[refreshTokens] tokenStore size before cleanup: ${tokenStore.size}`);
 
     if (newPoolNotifications.length > 0) {
+      console.log(`[refreshTokens] Sending ${newPoolNotifications.length} new pool alerts`);
       await Promise.all(
-        newPoolNotifications.map((token) =>
-          alertNewPool({
+        newPoolNotifications.map((token) => {
+          console.log(`[refreshTokens] Alerting new pool: ${token.symbol} (${token.pairAddress})`);
+          return alertNewPool({
             symbol: token.symbol,
+            name: token.name,
+            pairAddress: token.pairAddress,
+            baseMint: token.address,
             dexUrl: token.dexUrl,
             liquidityUSD: token.liquidityUSD,
             priceUsd: token.priceUsd,
             priceNative: token.priceNative,
             volume5m: token.volume5m,
             txns5m: token.txns5m,
+            buys5m: token.buys5m,
+            sells5m: token.sells5m,
+            priceChange1h: token.priceChange1h,
+            fdv: token.fdv,
+            baseReserve: token.baseReserve,
+            quoteReserve: token.quoteReserve,
+            liquiditySource: token.liquiditySource,
             ageMinutes: token.ageMinutes,
             gateReasons: token.gateReasons,
-          })
-        )
+            isCleanGem: token.isCleanGem,
+            riskScore: token.riskScore,
+            alphaScore: token.alphaScore,
+          });
+        })
       );
     }
     if (newlyDetectedCleanGems.length > 0) {
+      console.log(`[refreshTokens] Sending ${newlyDetectedCleanGems.length} clean gem alerts`);
       await Promise.all(
-        newlyDetectedCleanGems.map((token) =>
-          alertCleanGem({
+        newlyDetectedCleanGems.map((token) => {
+          console.log(`[refreshTokens] Alerting clean gem: ${token.symbol} (${token.pairAddress})`);
+          return alertCleanGem({
             symbol: token.symbol,
+            name: token.name,
+            pairAddress: token.pairAddress,
+            baseMint: token.address,
             dexUrl: token.dexUrl,
             liquidityUSD: token.liquidityUSD,
             priceUsd: token.priceUsd,
             priceNative: token.priceNative,
+            volume5m: token.volume5m,
+            txns5m: token.txns5m,
+            buys5m: token.buys5m,
+            sells5m: token.sells5m,
+            priceChange1h: token.priceChange1h,
+            fdv: token.fdv,
+            baseReserve: token.baseReserve,
+            quoteReserve: token.quoteReserve,
+            liquiditySource: token.liquiditySource,
             ageMinutes: token.ageMinutes,
+            gateReasons: token.gateReasons,
             riskScore: token.riskScore,
             alphaScore: token.alphaScore,
-          })
-        )
+          });
+        })
       );
     }
 

@@ -1,7 +1,7 @@
 {
   "name": "solana-clean-gems",
   "version": "1.0.0",
-  "description": "Solana Clean Early Gems - Find the cleanest early-stage memecoins",
+  "description": "Solana Clean Early G3ms - Find the cleanest early-stage memecoins",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -10,10 +10,11 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "dotenv": "^17.2.3",
+    "lucide-react": "^0.400.0",
     "next": "^14.2.0",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "lucide-react": "^0.400.0"
+    "react-dom": "^18.2.0"
   },
   "devDependencies": {
     "@types/node": "^20.12.0",
@@ -24,6 +25,7 @@
     "eslint-config-next": "^14.2.0",
     "postcss": "^8.4.38",
     "tailwindcss": "^3.4.3",
-    "typescript": "^5.4.0"
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
   }
 }

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ScoredToken, TokensResponse, FilterOptions } from '@/lib/types';
 import WhyModal from '@/components/WhyModal';
+import Image from 'next/image';
 import {
   RefreshCw,
   Filter,
@@ -234,9 +235,16 @@ const formatSolDelta = (current: number, baseline: number) => {
       <div className="max-w-7xl mx-auto mb-8">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <Gem className="text-gem-green" size={32} />
+            <Image
+              src="/icon.png"
+              alt="G3ms Logo"
+              width={56}
+              height={56}
+              className="rounded-lg"
+              priority
+            />
             <div>
-              <h1 className="text-2xl font-bold">Solana Clean Early Gems</h1>
+              <h1 className="text-2xl font-bold">Solana Clean Early G3ms</h1>
               <p className="text-sm text-gray-400">
                 Auto-discovering the cleanest early-stage memecoins
               </p>

@@ -1,4 +1,4 @@
-# Solana Clean Early Gems
+# Solana Clean Early G3ms
 
 A real trading tool that automatically finds the cleanest possible early-stage memecoins on Solana — tokens that show early momentum but are unlikely to be scams or rugs.
 
