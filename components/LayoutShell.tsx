@@ -16,8 +16,8 @@ export default function LayoutShell({ children }: { children: React.ReactNode })
   const pathname = usePathname();
   return (
     <div className="min-h-screen bg-[#030611] text-white">
-      <header className="border-b border-white/10 bg-gradient-to-b from-[#050b1a] to-transparent px-6 py-4 shadow-sm">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4">
+      <header className="border-b border-white/10 bg-gradient-to-b from-[#050b1a] to-transparent px-4 py-4 shadow-sm sm:px-6">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <Image src="/icon.png" alt="G3ms logo" width={80} height={80} className="rounded-full" priority />
             <div>
@@ -46,8 +46,8 @@ export default function LayoutShell({ children }: { children: React.ReactNode })
         </div>
       </header>
 
-      <div className="mx-auto grid max-w-6xl px-6 py-8 lg:grid-cols-[240px,1fr] lg:gap-6">
-        <aside className="order-2 mt-6 rounded-2xl border border-white/5 bg-gradient-to-br from-[#0b101e] to-transparent p-4 text-sm leading-relaxed text-gray-300 lg:order-1 lg:mt-0">
+      <div className="mx-auto grid max-w-7xl gap-8 px-4 py-8 sm:px-6 lg:grid-cols-[260px,1fr] lg:gap-6">
+        <aside className="order-2 rounded-2xl border border-white/5 bg-gradient-to-br from-[#0b101e] to-transparent p-4 text-sm leading-relaxed text-gray-300 lg:order-1">
           <p className="text-xs uppercase tracking-[0.4em] text-gem-green">Bot Signals</p>
           <p className="mt-2">
             Bot polls DexScreener every <strong>60s</strong> and streams newly listed pools plus Clean Gem alerts.
@@ -71,7 +71,7 @@ export default function LayoutShell({ children }: { children: React.ReactNode })
           </div>
         </aside>
 
-        <main className="order-1 rounded-3xl border border-white/5 bg-[#050b1a]/80 p-6 shadow-xl backdrop-blur md:order-2">
+        <main className="order-1 rounded-3xl border border-white/5 bg-[#050b1a]/80 p-4 shadow-xl backdrop-blur md:p-6 md:order-2">
           {children}
         </main>
       </div>
