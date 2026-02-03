@@ -32,9 +32,11 @@ export async function GET(request: Request) {
 
     // Apply filters
     let filteredTokens = allTokens.filter((token) => {
-      if (token.liquidity < filters.minLiquidity) return false;
-      if (token.riskScore < filters.minRisk) return false;
-      if (token.alphaScore < filters.minAlpha) return false;
+      if (!filters.showOnlyGems) {
+        if (token.liquidity < filters.minLiquidity) return false;
+        if (token.riskScore < filters.minRisk) return false;
+        if (token.alphaScore < filters.minAlpha) return false;
+      }
       if (token.ageMinutes > filters.maxAge) return false;
       if (filters.showOnlyGems && !token.isCleanGem) return false;
       return true;
