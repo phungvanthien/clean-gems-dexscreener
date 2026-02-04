@@ -136,7 +136,9 @@ export default function DashboardPage() {
 
         <div className="rounded-3xl border border-white/5 bg-[#080c17]/80 p-5">
           <h2 className="text-lg font-semibold">Market pulse</h2>
-          <p className="mt-2 text-sm text-gray-400">Latest bot refresh: {new Date(lastRefresh).toLocaleTimeString()} UTC</p>
+          <p className="mt-2 text-sm text-gray-400">
+            Latest bot refresh: {new Date(lastRefresh).toUTCString()}
+          </p>
           <div className="mt-4 space-y-3 text-sm text-gray-300">
             {tokens.slice(0, 5).map((token) => (
               <div key={token.pairAddress} className="flex items-center justify-between border-b border-white/5 pb-2 last:border-none">
