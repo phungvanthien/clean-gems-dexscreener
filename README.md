@@ -1,4 +1,4 @@
-# Solana Clean Early G3ms
+...
 
 A real trading tool that automatically finds the cleanest possible early-stage memecoins on Solana — tokens that show early momentum but are unlikely to be scams or rugs.
 
@@ -122,6 +122,26 @@ Query parameters:
 ### POST /api/tokens
 
 Forces a refresh of token data.
+
+### GET /api/clean-gems (premium)
+
+Requires an x402 payment (STX) before the response is unlocked. The endpoint is protected by `paymentMiddleware` and returns:
+
+- `cleanGems`: Tokens that passed the gate
+- `paidAt`: Timestamp when payment settled
+- `payment.transaction` / `payment.payer`: Details you can display on the UI
+
+The dashboard pays once, then lets the user view clean gems for 120 minutes. After that window expires, the client attempts another payment.
+
+Environment variables:
+
+```env
+SERVER_ADDRESS=SP2...          # Your receiving STX address
+FACILITATOR_URL=https://facilitator.stacksx402.com
+CLEAN_GEM_FEE_STX=0.0001
+```
+
+The front-end uses `wrapAxiosWithPayment` + `privateKeyToAccount` to sign each request. Users must paste a private key (or set `NEXT_PUBLIC_CLIENT_PRIVATE_KEY`) to unlock clean gems on the dashboard.
 
 ---
 
