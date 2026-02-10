@@ -138,7 +138,7 @@ Environment variables:
 ```env
 SERVER_ADDRESS=SP2...          # Your receiving STX address
 FACILITATOR_URL=https://facilitator.stacksx402.com
-CLEAN_GEM_FEE_STX=0.0001
+CLEAN_GEM_FEE_STX=1
 ```
 
 The front-end uses `wrapAxiosWithPayment` + `privateKeyToAccount` to sign each request. Users must paste a private key (or set `NEXT_PUBLIC_CLIENT_PRIVATE_KEY`) to unlock clean gems on the dashboard.
