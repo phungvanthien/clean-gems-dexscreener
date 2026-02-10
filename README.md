@@ -129,7 +129,7 @@ Requires an x402 payment (STX) before the response is unlocked. The endpoint is 
 
 - `cleanGems`: Tokens that passed the gate
 - `paidAt`: Timestamp when payment settled
-- `payment.transaction` / `payment.payer`: Details you can display on the UI
+- `payment.transaction` / `payment.payer`: Settlement details you can display on the UI
 
 The dashboard pays once, then lets the user view clean gems for 120 minutes. After that window expires, the client attempts another payment.
 
@@ -142,6 +142,10 @@ CLEAN_GEM_FEE_STX=1
 ```
 
 The front-end uses `wrapAxiosWithPayment` + `privateKeyToAccount` to sign each request. Users must paste a private key (or set `NEXT_PUBLIC_CLIENT_PRIVATE_KEY`) to unlock clean gems on the dashboard.
+
+### GET /api/clean-gems/schema
+
+Returns the x402 schema describing the premium endpoint (accepted payment, network, output schema). Use this payload when registering on scan.stacksx402.com or sharing the endpoint with agents.
 
 ---
 
