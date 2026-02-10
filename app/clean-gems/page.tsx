@@ -56,10 +56,12 @@ export default function CleanGemsPage() {
             className="rounded-2xl bg-gem-blue px-5 py-2 text-sm font-semibold text-white"
             onClick={refresh}
           >
-            {status === 'paying' ? 'Paying…' : 'Pay 0.0001 STX'}
+            {status === 'paying' ? 'Paying…' : 'Pay 1 STX'}
           </button>
         </div>
-        <p className="mt-2 text-xs text-gray-400">Payment unlocks Clean Gems for 120 minutes.</p>
+        <p className="mt-2 text-xs text-gray-400">
+          Payment of 1 STX unlocks Clean Gems for 120 minutes (per session).
+        </p>
         {paymentInfo && (
           <p className="mt-1 text-xs text-gray-500">
             Last tx: {paymentInfo.transaction} · payer {paymentInfo.payer}
