@@ -1,4 +1,4 @@
-import { generateWallet } from '@stacks/wallet-sdk';
+import { generateWallet, getGaiaAddress } from '@stacks/wallet-sdk';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -12,8 +12,8 @@ async function main() {
   });
 
   const account = wallet.accounts[0];
-  console.log('STX address:', account.address);
-  console.log('STX private key:', account.privateKey);
+  console.log('STX address:', getGaiaAddress(account));
+  console.log('STX private key:', account.stxPrivateKey);
   console.log('Set MASTER_PASSWORD=%s in .env for repeatable derives', PASSWORD);
 }
 
